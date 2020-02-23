@@ -13,3 +13,35 @@ message EchoRequest {
 message EchoReply {
     string body = 1;
 }
+
+// Wchar is W-character c
+message Wchar {
+    // Id is the id of c
+    Wid id = 1;
+    // Visible is {true | false}, if the character c is visible
+    bool visible = 2;
+    // Alpha is alphabetical value of the effective character of c
+    int32 code_point = 3;
+    // PreviousId is the id of the previous W-character of c
+    Wid previousId = 4;
+    // NextId is the id of the next W-character of c
+    Wid nextId = 5;
+}
+
+// Wid is the id of W-character
+message Wid {
+    // The identifier of a site (a peer)
+    string ns = 1;
+    // The local clock of the W-character is generated on a site
+    int64 ng = 2;
+}
+
+message Operation {
+    OperationType type = 1;
+    Wchar c = 2;
+}
+
+enum OperationType {
+    INSERT = 0;
+    DELETE = 1;
+}

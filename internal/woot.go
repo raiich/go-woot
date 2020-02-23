@@ -1,26 +1,8 @@
 package internal
 
-// WChar is W-character c
-type WChar struct {
-	// Id is the id of c
-	Id Wid
-	// Visible is {true | false}, if the character c is visible
-	Visible bool
-	// Alpha is alphabetical value of the effective character of c
-	Alpha rune
-	// PreviousId is the id of the previous W-character of c
-	PreviousId Wid
-	// NextId is the id of the next W-character of c
-	NextId Wid
-}
-
-// Wid is the id of W-character
-type Wid struct {
-	// The identifier of a site (a peer)
-	Ns string
-	// The local clock of the W-character is generated on a site
-	Ng int64
-}
+import (
+	pb "../api"
+)
 
 type Editor struct {
 	SiteId     string
@@ -28,39 +10,39 @@ type Editor struct {
 }
 
 // Special W-character, beginning of the sequence
-var Cb = WChar{
-	Id:      Wid{"_", 0},
+var Cb = pb.Wchar{
+	Id:      &pb.Wid{Ns: "_", Ng: 0},
 	Visible: false,
 }
 
 // Special W-character, ending of the sequence
-var Ce = WChar{
-	Id:      Wid{"_", 1},
+var Ce = pb.Wchar{
+	Id:      &pb.Wid{Ns: "_", Ng: 1},
 	Visible: false,
 }
 
 type Sequence struct {
 }
 
-func (s *Sequence) len() int {
+func (s *Sequence) Len() int {
 	return 0
 }
 
-func (s *Sequence) at(position int) *WChar {
+func (s *Sequence) At(position int) *pb.Wchar {
 	return nil
 }
 
-func (s *Sequence) pos(c WChar) int {
+func (s *Sequence) Pos(c *pb.Wchar) int {
 	return 0
 }
 
 func (s *Sequence) Insert(c rune, position int) {}
 
-func (s *Sequence) Subseq(c Wid, d Wid) *Sequence {
+func (s *Sequence) Subseq(c *pb.Wid, d *pb.Wid) *Sequence {
 	return nil
 }
 
-func (s *Sequence) Contains(c Wid) bool {
+func (s *Sequence) Contains(c *pb.Wid) bool {
 	return false
 }
 
@@ -70,4 +52,18 @@ func (s *Sequence) Value() *string {
 
 func (s *Sequence) IthVisible(i int) bool {
 	return false
+}
+
+func Ins(c *pb.Wchar) *pb.Operation {
+	return &pb.Operation{
+		Type: pb.OperationType_INSERT,
+		C: c,
+	}
+}
+
+func Del(c *pb.Wchar) *pb.Operation {
+	return &pb.Operation{
+		Type: pb.OperationType_DELETE,
+		C: c,
+	}
 }
