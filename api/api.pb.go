@@ -4,8 +4,12 @@
 package echo
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
+	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	math "math"
 )
 
@@ -331,4 +335,84 @@ var fileDescriptor_00212fb1f9d3bf1c = []byte{
 	0x08, 0xdd, 0xd6, 0xf1, 0x6c, 0x17, 0x74, 0x70, 0xa4, 0x8b, 0xd3, 0x43, 0xc9, 0xac, 0xeb, 0xb4,
 	0xb1, 0x68, 0xfb, 0x9b, 0xde, 0x7f, 0x05, 0x00, 0x00, 0xff, 0xff, 0x41, 0xa2, 0x35, 0x21, 0xe0,
 	0x01, 0x00, 0x00,
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConnInterface
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion6
+
+// WootClient is the client API for Woot service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type WootClient interface {
+	Echo(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoReply, error)
+}
+
+type wootClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewWootClient(cc grpc.ClientConnInterface) WootClient {
+	return &wootClient{cc}
+}
+
+func (c *wootClient) Echo(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoReply, error) {
+	out := new(EchoReply)
+	err := c.cc.Invoke(ctx, "/echo.Woot/Echo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// WootServer is the server API for Woot service.
+type WootServer interface {
+	Echo(context.Context, *EchoRequest) (*EchoReply, error)
+}
+
+// UnimplementedWootServer can be embedded to have forward compatible implementations.
+type UnimplementedWootServer struct {
+}
+
+func (*UnimplementedWootServer) Echo(ctx context.Context, req *EchoRequest) (*EchoReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Echo not implemented")
+}
+
+func RegisterWootServer(s *grpc.Server, srv WootServer) {
+	s.RegisterService(&_Woot_serviceDesc, srv)
+}
+
+func _Woot_Echo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EchoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WootServer).Echo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/echo.Woot/Echo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WootServer).Echo(ctx, req.(*EchoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Woot_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "echo.Woot",
+	HandlerType: (*WootServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Echo",
+			Handler:    _Woot_Echo_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api.proto",
 }
