@@ -18,10 +18,10 @@ message EchoReply {
 message Wchar {
     // Id is the id of c
     Wid id = 1;
-    // Visible is {true | false}, if the character c is visible
-    bool visible = 2;
     // Alpha is alphabetical value of the effective character of c
-    int32 code_point = 3;
+    int32 code_point = 2;
+    // Visible is {true | false}, if the character c is visible
+    bool visible = 3;
     // PreviousId is the id of the previous W-character of c
     Wid previousId = 4;
     // NextId is the id of the next W-character of c
