@@ -34,8 +34,8 @@ type Site struct {
 
 func InitialSequence() Sequence {
 	ls := list.New()
-	ls.PushBack(Cb)
-	ls.PushBack(Ce)
+	ls.PushBack(&Cb)
+	ls.PushBack(&Ce)
 	return Sequence{ls}
 }
 
@@ -82,8 +82,8 @@ func (s Sequence) contains(c pb.Wid) bool {
 
 func (s Sequence) value() string {
 	var builder strings.Builder
-	for head := s.head(); head != nil ; head = &(SubSeq{head.Next()}) {
-		wchar := head.wchar()
+	for head := s.head().Element; head != nil ; head = head.Next() {
+		wchar := SubSeq{head}.wchar()
 		if wchar.Visible {
 			builder.WriteRune(wchar.CodePoint)
 		}
@@ -92,6 +92,9 @@ func (s Sequence) value() string {
 }
 
 func (s Sequence) ithVisible(i int) *pb.Wchar {
+	if i == 0 {
+		return &Cb
+	}
 	_, found := s.head().find(func(c *pb.Wchar) bool {
 		if c.Visible {
 			if i == 0 {
@@ -102,7 +105,12 @@ func (s Sequence) ithVisible(i int) *pb.Wchar {
 		}
 		return false
 	})
-	return found.wchar()
+	if found != nil {
+		return found.wchar()
+	} else {
+		return &Ce
+	}
+
 }
 
 func ins(c *pb.Wchar) *pb.Operation {
@@ -247,9 +255,10 @@ func (s Sequence) head() *SubSeq{
 
 func (s SubSeq) find(pred predicate) (int, *SubSeq) {
 	c := 0
-	for elem := &s; elem != nil; elem = &(SubSeq{elem.Next()}) {
-		if pred(elem.wchar()) {
-			return c, elem
+	for elem := s.Element; elem != nil; elem = elem.Next() {
+		ss := SubSeq{elem}
+		if pred(ss.wchar()) {
+			return c, &ss
 		} else {
 			c += 1
 		}
