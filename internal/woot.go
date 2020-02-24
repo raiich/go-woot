@@ -57,12 +57,12 @@ func (s Sequence) insert(c *pb.Wchar, i int) {
 			return false
 		}
 	})
-	s.stringS.InsertAfter(c, neighbor)
+	s.stringS.InsertAfter(c, neighbor.Element)
 }
 
-func (s Sequence) subseq(c pb.Wid, d pb.Wid) (int, *list.Element) {
+func (s Sequence) subseq(c pb.Wid, d pb.Wid) (int, *SubSeq) {
 	_, head := s.head().findElementById(c)
-	length, _ := SubSeq{head}.findElementById(d)
+	length, _ := head.findElementById(d)
 	return length, head
 }
 
@@ -73,8 +73,8 @@ func (s Sequence) contains(c pb.Wid) bool {
 
 func (s Sequence) value() string {
 	var builder strings.Builder
-	for head := s.stringS.Front(); head != nil ; head = head.Next() {
-		wchar := head.Value.(*pb.Wchar)
+	for head := s.head(); head != nil ; head = &(SubSeq{head.Next()}) {
+		wchar := head.wchar()
 		if wchar.Visible {
 			builder.WriteRune(wchar.CodePoint)
 		}
@@ -93,7 +93,7 @@ func (s Sequence) ithVisible(i int) *pb.Wchar {
 		}
 		return false
 	})
-	return found.Value.(*pb.Wchar)
+	return found.wchar()
 }
 
 func ins(c *pb.Wchar) *pb.Operation {
@@ -145,11 +145,11 @@ func (site *Site) IntegrateIns(c *pb.Wchar, cp pb.Wid, cn pb.Wid) {
 		l = append(l, cp)
 		current := ss
 		for i := 0; i < length; i += 1 {
-			di := current.Value.(*pb.Wchar)
+			di := current.wchar()
 			if s.pos(*di.PreviousId) <= s.pos(cp) && s.pos(cn) <= s.pos(*di.NextId) {
 				l = append(l, *di.Id)
 			}
-			current = current.Next()
+			current = &SubSeq{current.Next()}
 		}
 
 		var prev, next pb.Wid
@@ -203,7 +203,7 @@ func (site *Site) Reception(op *pb.Operation) {
 func (site *Site) Integrate(op *pb.Operation) {
 	if op.Type == pb.OperationType_DELETE {
 		_, c := site.seq.head().findElementById(*op.C.Id)
-		site.IntegrateDel(c.Value.(*pb.Wchar))
+		site.IntegrateDel(c.wchar())
 	} else {
 		c := op.C
 		site.IntegrateIns(c, *c.PreviousId, *c.NextId)
@@ -225,17 +225,17 @@ func (site *Site) Main() {
 type predicate func(c *pb.Wchar) bool
 
 type SubSeq struct {
-	head *list.Element
+	 *list.Element
 }
 
-func (s Sequence) head() SubSeq{
-	return SubSeq{s.stringS.Front()}
+func (s Sequence) head() *SubSeq{
+	return &SubSeq{s.stringS.Front()}
 }
 
-func (s SubSeq) find(pred predicate) (int, *list.Element) {
+func (s SubSeq) find(pred predicate) (int, *SubSeq) {
 	c := 0
-	for elem := s.head; elem != nil; elem = elem.Next() {
-		if pred(elem.Value.(*pb.Wchar)) {
+	for elem := &s; elem != nil; elem = &(SubSeq{elem.Next()}) {
+		if pred(elem.wchar()) {
 			return c, elem
 		} else {
 			c += 1
@@ -244,10 +244,14 @@ func (s SubSeq) find(pred predicate) (int, *list.Element) {
 	return -1, nil
 }
 
-func (s SubSeq) findElementById(wid pb.Wid) (int, *list.Element) {
+func (s SubSeq) findElementById(wid pb.Wid) (int, *SubSeq) {
 	return s.find(func(c *pb.Wchar) bool {
 		return equal(c.Id, wid)
 	})
+}
+
+func (s SubSeq) wchar() *pb.Wchar {
+	return s.Value.(*pb.Wchar)
 }
 
 func equal(a *pb.Wid, b pb.Wid) bool {
