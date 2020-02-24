@@ -39,6 +39,15 @@ func InitialSequence() Sequence {
 	return Sequence{ls}
 }
 
+func NewSite(id string) Site {
+	return Site {
+		id,
+		0,
+		InitialSequence(),
+		make(chan *pb.Operation),
+	}
+}
+
 func (s Sequence) pos(wid pb.Wid) int {
 	p, found := s.head().findElementById(wid)
 	if found != nil {
@@ -220,6 +229,10 @@ func (site *Site) Main() {
 			}
 		}
 	}
+}
+
+func (site *Site) Value() string {
+	return site.seq.value()
 }
 
 type predicate func(c *pb.Wchar) bool
