@@ -40,7 +40,7 @@ func InitialSequence() Sequence {
 }
 
 func NewSite(id string) Site {
-	return Site {
+	return Site{
 		id,
 		0,
 		InitialSequence(),
@@ -66,13 +66,14 @@ func (s Sequence) insert(c *pb.Wchar, i int) {
 			return false
 		}
 	})
-	s.stringS.InsertAfter(c, neighbor.Element)
+	s.stringS.InsertBefore(c, neighbor.Element)
 }
 
 func (s Sequence) subseq(c pb.Wid, d pb.Wid) (int, *SubSeq) {
 	_, head := s.head().findElementById(c)
-	length, _ := head.findElementById(d)
-	return length, head
+	ret := SubSeq{head.Next()}
+	length, _ := ret.findElementById(d)
+	return length, &ret
 }
 
 func (s Sequence) contains(c pb.Wid) bool {
@@ -82,7 +83,7 @@ func (s Sequence) contains(c pb.Wid) bool {
 
 func (s Sequence) value() string {
 	var builder strings.Builder
-	for head := s.head().Element; head != nil ; head = head.Next() {
+	for head := s.head().Element; head != nil; head = head.Next() {
 		wchar := SubSeq{head}.wchar()
 		if wchar.Visible {
 			builder.WriteRune(wchar.CodePoint)
@@ -168,16 +169,13 @@ func (site *Site) IntegrateIns(c *pb.Wchar, cp pb.Wid, cn pb.Wid) {
 			}
 			current = &SubSeq{current.Next()}
 		}
+		l = append(l, cn)
 
-		var prev, next pb.Wid
-		for i, li := range l {
-			if compare(li, c.Id) < 0 {
-				prev = l[i-1]
-				next = li
-				break
-			}
+		i := 1
+		for ; i < len(l) - 1 && compare(l[i], c.Id) < 0; {
+			i += 1
 		}
-		site.IntegrateIns(c, prev, next)
+		site.IntegrateIns(c, l[i-1], l[i])
 	}
 }
 
@@ -195,7 +193,7 @@ func compare(a pb.Wid, b *pb.Wid) int {
 	}
 }
 
-func (site *Site)IntegrateDel(wchar *pb.Wchar) {
+func (site *Site) IntegrateDel(wchar *pb.Wchar) {
 	wchar.Visible = false
 }
 
@@ -246,10 +244,10 @@ func (site *Site) Value() string {
 type predicate func(c *pb.Wchar) bool
 
 type SubSeq struct {
-	 *list.Element
+	*list.Element
 }
 
-func (s Sequence) head() *SubSeq{
+func (s Sequence) head() *SubSeq {
 	return &SubSeq{s.stringS.Front()}
 }
 
@@ -277,5 +275,5 @@ func (s SubSeq) wchar() *pb.Wchar {
 }
 
 func equal(a *pb.Wid, b pb.Wid) bool {
-	return a.Ns == b.Ns && a.Ng == a.Ng
+	return a.Ns == b.Ns && a.Ng == b.Ng
 }
