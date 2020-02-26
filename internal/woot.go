@@ -7,13 +7,13 @@ import (
 )
 
 // Special W-character, beginning of the sequence
-var Cb = pb.Wchar{
+var cb = pb.Wchar{
 	Id:      &pb.Wid{Ns: "_", Ng: 0},
 	Visible: false,
 }
 
 // Special W-character, ending of the sequence
-var Ce = pb.Wchar{
+var ce = pb.Wchar{
 	Id:      &pb.Wid{Ns: "_", Ng: 1},
 	Visible: false,
 }
@@ -30,22 +30,33 @@ type Site struct {
 	Hs   int64
 	seq  Sequence
 	pool chan *pb.Operation
+	queue []*pb.Operation
 }
 
-func InitialSequence() Sequence {
+func initialSequence(initial string) Sequence {
 	ls := list.New()
-	ls.PushBack(&Cb)
-	ls.PushBack(&Ce)
+	ls.PushBack(&cb)
+
+	for i, c := range initial {
+		ls.PushBack(&pb.Wchar{
+			Id:      &pb.Wid{Ns: "_", Ng: int64(2 + i)},
+			CodePoint: c,
+			Visible: true,
+		})
+	}
+	ls.PushBack(&ce)
 	return Sequence{ls}
 }
 
-func NewSite(id string) Site {
-	return Site{
+func NewSite(id string, initial string) Site {
+	site := Site{
 		id,
 		0,
-		InitialSequence(),
+		initialSequence(initial),
 		make(chan *pb.Operation),
+		make([]*pb.Operation, 0),
 	}
+	return site
 }
 
 func (s Sequence) pos(wid pb.Wid) int {
@@ -94,8 +105,9 @@ func (s Sequence) value() string {
 
 func (s Sequence) ithVisible(i int) *pb.Wchar {
 	if i == 0 {
-		return &Cb
+		return &cb
 	}
+	i -= 1
 	_, found := s.head().find(func(c *pb.Wchar) bool {
 		if c.Visible {
 			if i == 0 {
@@ -109,7 +121,7 @@ func (s Sequence) ithVisible(i int) *pb.Wchar {
 	if found != nil {
 		return found.wchar()
 	} else {
-		return &Ce
+		return &ce
 	}
 
 }
@@ -144,13 +156,15 @@ func (site *Site) GenerateIns(pos int, alpha rune) *pb.Operation {
 		NextId:     cn.Id,
 	}
 	site.IntegrateIns(wchar, *cp.Id, *cn.Id)
-	return broadcast(ins(wchar))
+	return ins(wchar)
+	// broadcast(ins(wchar))
 }
 
 func (site *Site) GenerateDel(pos int) *pb.Operation {
 	wchar := site.seq.ithVisible(pos)
 	site.IntegrateDel(wchar)
-	return broadcast(del(wchar))
+	return del(wchar)
+	// broadcast(del(wchar))
 }
 
 func (site *Site) IntegrateIns(c *pb.Wchar, cp pb.Wid, cn pb.Wid) {
@@ -215,7 +229,7 @@ func (site *Site) Reception(op *pb.Operation) {
 	site.pool <- op
 }
 
-func (site *Site) Integrate(op *pb.Operation) {
+func (site *Site) integrate(op *pb.Operation) {
 	if op.Type == pb.OperationType_DELETE {
 		_, c := site.seq.head().findElementById(*op.C.Id)
 		site.IntegrateDel(c.wchar())
@@ -225,11 +239,35 @@ func (site *Site) Integrate(op *pb.Operation) {
 	}
 }
 
+func (site *Site) Integrate(op *pb.Operation) int {
+	consumed := 0
+	site.queue = append(site.queue, op)
+	for {
+		l := len(site.queue)
+		pool := make([]*pb.Operation, 0)
+		for _, op := range site.queue {
+			if site.isExecutable(op) {
+				site.integrate(op)
+			} else {
+				pool = append(pool, op)
+			}
+		}
+		site.queue = pool
+		if len(site.queue) == l {
+			// need missing operation (wait operation to arrive)
+			break
+		} else {
+			consumed += l - len(site.queue)
+		}
+	}
+	return consumed
+}
+
 func (site *Site) Main() {
 	for {
 		for op := range site.pool {
 			if site.isExecutable(op) {
-				site.Integrate(op)
+				site.integrate(op)
 			} else {
 				site.pool <- op
 			}
