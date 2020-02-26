@@ -2,7 +2,7 @@ package main
 
 import (
 	pb "../api"
-	"../internal"
+	w "../internal"
 	"context"
 	"flag"
 	"fmt"
@@ -63,15 +63,84 @@ func report(ch *chan string) {
 	}
 }
 
-func main() {
+func main0() {
 	port, peers := parse()
 	fmt.Printf("starting server (port: %d)...\n", port)
-	s := internal.StartServer(port)
+	s := w.StartServer(port)
 	defer func() {
 		time.Sleep(1 * time.Second)
 		s.Stop()
 		println("done...")
 	}()
-
 	exec(peers)
+}
+
+func eq(a *pb.Wid, b *pb.Wid) bool {
+	return w.Equal(a, *b)
+}
+
+func clone(ss *w.SubSeq) []*pb.Wchar {
+	ret := make([]*pb.Wchar, 0)
+	for ; ss != nil; ss = ss.Next() {
+		ret = append(ret, ss.Val())
+	}
+	return ret
+}
+
+func diff(former []*pb.Wchar, latter []*pb.Wchar) string {
+	ret := make([]rune, 0)
+	i, j := 0, 0
+	for ; i < len(former) && j < len(latter); {
+		o, n := former[i], latter[j]
+		if eq(o.Id, n.Id) {
+			if o.Visible {
+				if n.Visible { // keep
+					ret = append(ret, n.CodePoint)
+				} else { // deleted
+					ret = append(ret, ' ')
+				}
+			} else {
+				if n.Visible {
+					panic("invalid")
+				}
+			}
+			i += 1
+			j += 1
+		} else {
+			if !n.Visible {
+				panic("invalid")
+			} else { // inserted
+				ret = append(ret, '?')
+			}
+		}
+	}
+	return string(ret)
+}
+
+func main() {
+	site1 := w.NewSite("site1", "a")
+	former := clone(site1.Raw())
+	print("\033[H\033[2J")
+	println(site1.Value())
+
+	site1.GenerateIns(0, 'A')
+	latter := clone(site1.Raw())
+	time.Sleep(time.Second)
+	print("\033[H\033[2J")
+	println(diff(former, latter))
+	println(site1.Value())
+
+	site1.GenerateIns(2, 'B')
+	former, latter = latter, clone(site1.Raw())
+	time.Sleep(time.Second)
+	print("\033[H\033[2J")
+	println(diff(former, latter))
+	println(site1.Value())
+
+	site1.GenerateDel(1)
+	former, latter = latter, clone(site1.Raw())
+	time.Sleep(time.Second)
+	print("\033[H\033[2J")
+	println(diff(former, latter))
+	println(site1.Value())
 }
