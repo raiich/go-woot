@@ -77,14 +77,14 @@ func (s Sequence) insert(c *pb.Wchar, i int) {
 			return false
 		}
 	})
-	s.stringS.InsertBefore(c, neighbor.Element)
+	s.stringS.InsertBefore(c, neighbor.elem)
 }
 
 func (s Sequence) subseq(c pb.Wid, d pb.Wid) (int, *SubSeq) {
 	_, head := s.head().findElementById(c)
-	ret := SubSeq{head.Next()}
+	ret := head.Next()
 	length, _ := ret.findElementById(d)
-	return length, &ret
+	return length, ret
 }
 
 func (s Sequence) contains(c pb.Wid) bool {
@@ -94,8 +94,8 @@ func (s Sequence) contains(c pb.Wid) bool {
 
 func (s Sequence) value() string {
 	var builder strings.Builder
-	for head := s.head().Element; head != nil; head = head.Next() {
-		wchar := SubSeq{head}.wchar()
+	for head := s.head(); head != nil; head = head.Next() {
+		wchar := head.Val()
 		if wchar.Visible {
 			builder.WriteRune(wchar.CodePoint)
 		}
@@ -119,7 +119,7 @@ func (s Sequence) ithVisible(i int) *pb.Wchar {
 		return false
 	})
 	if found != nil {
-		return found.wchar()
+		return found.Val()
 	} else {
 		return &ce
 	}
@@ -157,14 +157,14 @@ func (site *Site) GenerateIns(pos int, alpha rune) *pb.Operation {
 	}
 	site.IntegrateIns(wchar, *cp.Id, *cn.Id)
 	return ins(wchar)
-	// broadcast(ins(wchar))
+	// TODO broadcast
 }
 
 func (site *Site) GenerateDel(pos int) *pb.Operation {
 	wchar := site.seq.ithVisible(pos + 1)
 	site.IntegrateDel(wchar)
 	return del(wchar)
-	// broadcast(del(wchar))
+	// TODO broadcast
 }
 
 func (site *Site) IntegrateIns(c *pb.Wchar, cp pb.Wid, cn pb.Wid) {
@@ -175,13 +175,13 @@ func (site *Site) IntegrateIns(c *pb.Wchar, cp pb.Wid, cn pb.Wid) {
 	} else {
 		var l []pb.Wid
 		l = append(l, cp)
-		current := ss
+
 		for i := 0; i < length; i += 1 {
-			di := current.wchar()
+			di := ss.Val()
 			if s.pos(*di.PreviousId) <= s.pos(cp) && s.pos(cn) <= s.pos(*di.NextId) {
 				l = append(l, *di.Id)
 			}
-			current = &SubSeq{current.Next()}
+			ss = ss.Next()
 		}
 		l = append(l, cn)
 
@@ -211,10 +211,6 @@ func (site *Site) IntegrateDel(wchar *pb.Wchar) {
 	wchar.Visible = false
 }
 
-func broadcast(op *pb.Operation) *pb.Operation {
-	return op
-}
-
 func (site *Site) isExecutable(op *pb.Operation) bool {
 	c := op.C
 	if op.Type == pb.OperationType_DELETE {
@@ -232,7 +228,7 @@ func (site *Site) Reception(op *pb.Operation) {
 func (site *Site) integrate(op *pb.Operation) {
 	if op.Type == pb.OperationType_DELETE {
 		_, c := site.seq.head().findElementById(*op.C.Id)
-		site.IntegrateDel(c.wchar())
+		site.IntegrateDel(c.Val())
 	} else {
 		c := op.C
 		site.IntegrateIns(c, *c.PreviousId, *c.NextId)
@@ -279,22 +275,25 @@ func (site *Site) Value() string {
 	return site.seq.value()
 }
 
+func (site *Site) Raw() *SubSeq {
+	return site.seq.head()
+}
+
 type predicate func(c *pb.Wchar) bool
 
 type SubSeq struct {
-	*list.Element
+	elem *list.Element
 }
 
-func (s Sequence) head() SubSeq {
-	return SubSeq{s.stringS.Front()}
+func (s Sequence) head() *SubSeq {
+	return &SubSeq{s.stringS.Front()}
 }
 
 func (s SubSeq) find(pred predicate) (int, *SubSeq) {
 	c := 0
-	for elem := s.Element; elem != nil; elem = elem.Next() {
-		ss := SubSeq{elem}
-		if pred(ss.wchar()) {
-			return c, &ss
+	for elem := &s; elem != nil; elem = elem.Next() {
+		if pred(elem.Val()) {
+			return c, elem
 		} else {
 			c += 1
 		}
@@ -304,14 +303,18 @@ func (s SubSeq) find(pred predicate) (int, *SubSeq) {
 
 func (s SubSeq) findElementById(wid pb.Wid) (int, *SubSeq) {
 	return s.find(func(c *pb.Wchar) bool {
-		return equal(c.Id, wid)
+		return Equal(c.Id, wid)
 	})
 }
 
-func (s SubSeq) wchar() *pb.Wchar {
-	return s.Value.(*pb.Wchar)
+func (s SubSeq) Next() *SubSeq {
+	return &SubSeq{s.elem.Next()}
 }
 
-func equal(a *pb.Wid, b pb.Wid) bool {
+func (s SubSeq) Val() *pb.Wchar {
+	return s.elem.Value.(*pb.Wchar)
+}
+
+func Equal(a *pb.Wid, b pb.Wid) bool {
 	return a.Ns == b.Ns && a.Ng == b.Ng
 }
