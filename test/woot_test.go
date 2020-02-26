@@ -23,9 +23,6 @@ func TestExample(t *testing.T) {
 	site2 := internal.NewSite("site2", "ab")
 	site3 := internal.NewSite("site3", "ab")
 
-	println(site1.Value())
-
-
 	op1 := site1.GenerateIns(1, '1')
 	op2 := site2.GenerateIns(1, '2')
 	op3 := site1.GenerateIns(1, '3')
