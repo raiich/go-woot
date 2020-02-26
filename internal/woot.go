@@ -308,7 +308,12 @@ func (s SubSeq) findElementById(wid pb.Wid) (int, *SubSeq) {
 }
 
 func (s SubSeq) Next() *SubSeq {
-	return &SubSeq{s.elem.Next()}
+	next := s.elem.Next()
+	if next != nil {
+		return &SubSeq{next}
+	} else {
+		return nil
+	}
 }
 
 func (s SubSeq) Val() *pb.Wchar {
