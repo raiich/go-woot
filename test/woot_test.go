@@ -60,14 +60,6 @@ func TestInsIns1(t *testing.T) {
 	site2 := internal.NewSite("site2", "ab")
 	site3 := internal.NewSite("site3", "ab")
 
-	op := site1.GenerateIns(0, 'a')
-	site2.Integrate(op)
-	site3.Integrate(op)
-
-	op = site2.GenerateIns(1, 'b')
-	site1.Integrate(op)
-	site3.Integrate(op)
-
 	op1 := site1.GenerateIns(1, '1')
 	op2 := site2.GenerateIns(1, '2')
 
@@ -80,7 +72,7 @@ func TestInsIns1(t *testing.T) {
 	site2.Integrate(op1)
 	site3.Integrate(op2)
 
-	if !(site1.Value() == "a31b" && site1.Value() == site2.Value() && site1.Value() == site3.Value()) {
+	if !(site1.Value() == "a312b" && site1.Value() == site2.Value() && site1.Value() == site3.Value()) {
 		t.Fatalf("failed %v, %v, %v", site1.Value(), site2.Value(), site3.Value())
 	}
 }

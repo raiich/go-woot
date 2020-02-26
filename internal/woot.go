@@ -161,7 +161,7 @@ func (site *Site) GenerateIns(pos int, alpha rune) *pb.Operation {
 }
 
 func (site *Site) GenerateDel(pos int) *pb.Operation {
-	wchar := site.seq.ithVisible(pos)
+	wchar := site.seq.ithVisible(pos + 1)
 	site.IntegrateDel(wchar)
 	return del(wchar)
 	// broadcast(del(wchar))
