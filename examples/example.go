@@ -6,6 +6,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
 	"strings"
 	"time"
@@ -82,7 +83,7 @@ func eq(a *pb.Wid, b *pb.Wid) bool {
 func clone(ss *w.SubSeq) []*pb.Wchar {
 	ret := make([]*pb.Wchar, 0)
 	for ; ss != nil; ss = ss.Next() {
-		ret = append(ret, ss.Val())
+		ret = append(ret, proto.Clone(ss.Val()).(*pb.Wchar))
 	}
 	return ret
 }
@@ -97,7 +98,7 @@ func diff(former []*pb.Wchar, latter []*pb.Wchar) string {
 				if n.Visible { // keep
 					ret = append(ret, n.CodePoint)
 				} else { // deleted
-					ret = append(ret, ' ')
+					ret = append(ret, '_')
 				}
 			} else {
 				if n.Visible {
@@ -111,10 +112,17 @@ func diff(former []*pb.Wchar, latter []*pb.Wchar) string {
 				panic("invalid")
 			} else { // inserted
 				ret = append(ret, '?')
+				j += 1
 			}
 		}
 	}
 	return string(ret)
+}
+
+func show(x string) {
+	time.Sleep(time.Second)
+	print("\033[H\033[2J")
+	println(x)
 }
 
 func main() {
@@ -125,22 +133,16 @@ func main() {
 
 	site1.GenerateIns(0, 'A')
 	latter := clone(site1.Raw())
-	time.Sleep(time.Second)
-	print("\033[H\033[2J")
-	println(diff(former, latter))
-	println(site1.Value())
+	show(diff(former, latter))
+	show(site1.Value())
 
 	site1.GenerateIns(2, 'B')
 	former, latter = latter, clone(site1.Raw())
-	time.Sleep(time.Second)
-	print("\033[H\033[2J")
-	println(diff(former, latter))
-	println(site1.Value())
+	show(diff(former, latter))
+	show(site1.Value())
 
 	site1.GenerateDel(1)
 	former, latter = latter, clone(site1.Raw())
-	time.Sleep(time.Second)
-	print("\033[H\033[2J")
-	println(diff(former, latter))
-	println(site1.Value())
+	show(diff(former, latter))
+	show(site1.Value())
 }
