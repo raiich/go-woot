@@ -285,8 +285,8 @@ type SubSeq struct {
 	*list.Element
 }
 
-func (s Sequence) head() *SubSeq {
-	return &SubSeq{s.stringS.Front()}
+func (s Sequence) head() SubSeq {
+	return SubSeq{s.stringS.Front()}
 }
 
 func (s SubSeq) find(pred predicate) (int, *SubSeq) {
