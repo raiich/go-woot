@@ -11,7 +11,7 @@ import (
 func randomEdit(site *internal.Site, slot []rune) *pb.Operation {
 	mode := rand.Int31n(100)
 	length := len(site.Value())
-	if length > 5 && mode%4 == 0 || length > 50 {
+	if length > 3 && mode%4 == 0 || length > 10 {
 		pos := rand.Intn(len(site.Value()))
 		return site.GenerateDel(pos)
 	} else {
