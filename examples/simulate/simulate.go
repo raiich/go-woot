@@ -5,13 +5,14 @@ import (
 	"../../internal"
 	"container/heap"
 	"fmt"
+	"math"
 	"math/rand"
 )
 
 func randomEdit(site *internal.Site, slot []rune) *pb.Operation {
 	mode := rand.Int31n(100)
 	length := len(site.Value())
-	if length > 3 && mode%4 == 0 || length > 10 {
+	if length > 2 && mode%2 == 0 || length > 5 {
 		pos := rand.Intn(len(site.Value()))
 		return site.GenerateDel(pos)
 	} else {
@@ -63,7 +64,7 @@ func NewPeers(slots [][]rune) []*Peer {
 	peers := make([]*Peer, len(slots))
 	for i, slot := range slots {
 		peers[i] = &Peer{
-			Site: internal.NewSite(fmt.Sprintf("site%v", i), " "),
+			Site: internal.NewSite(fmt.Sprintf("site%v", i), "A"),
 			slot: slot,
 			pq:   make(PriorityQueue, 0),
 		}
@@ -76,7 +77,12 @@ func NewPeers(slots [][]rune) []*Peer {
 
 func (p *Peer) broadcast(op *pb.Operation) {
 	for peer := p.neighbor; peer != p; peer = peer.neighbor {
-		heap.Push(&peer.pq, &Item{rand.Int(), op})
+		priority := rand.Int()
+		if op.Type == pb.OperationType_DELETE {
+			//priority /= 10000
+			priority = int(math.Log(float64(priority)))
+		}
+		heap.Push(&peer.pq, &Item{priority, op})
 	}
 }
 
@@ -108,12 +114,13 @@ func filter(peers []*Peer, pred predicate) []*Peer {
 
 type Info struct {
 	Peer  int
+	Operation string
 	Value string
 }
 
-func dump(peers []*Peer, out chan Info) {
+func dump(peers []*Peer, op string, out chan Info) {
 	for i, p := range peers {
-		out <- Info{i, p.Value()}
+		out <- Info{i, op, p.Value()}
 	}
 }
 
@@ -123,6 +130,8 @@ func Run(peers []*Peer, out chan Info, trial int) {
 			op := randomEdit(&p.Site, p.slot)
 			p.broadcast(op)
 		}
+		dump(peers, "Edit ", out)
+
 		for range peers {
 			candidates := filter(peers, func(p *Peer) bool {
 				return len(p.pq) > 0
@@ -130,12 +139,12 @@ func Run(peers []*Peer, out chan Info, trial int) {
 			p := rand.Intn(len(candidates))
 			candidates[p].consume()
 		}
-		dump(peers, out)
+		dump(peers, "Merge", out)
 	}
 
 	for _, p := range peers {
 		p.flush()
 	}
-	dump(peers, out)
+	dump(peers, "merge", out)
 	close(out)
 }

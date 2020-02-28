@@ -44,12 +44,12 @@ func arrayDiff(base []rune, edited []rune) []rune {
 
 			a, b, c := dp[i + 1][j], dp[i][j + 1], dp[i][j] + plus
 			x, y, z := move{0, 1}, move{1, 0}, move{1, 1}
-			if a <= c && b <= c {
-				dp[i + 1][j + 1] = c
-				route[i + 1][j + 1] = z
-			} else if a <= b && c <= b {
+			if a <= b && c <= b {
 				dp[i + 1][j + 1] = b
 				route[i + 1][j + 1] = y
+			} else if a <= c && b <= c {
+				dp[i + 1][j + 1] = c
+				route[i + 1][j + 1] = z
 			} else if b <= a && c <= a {
 				dp[i + 1][j + 1] = a
 				route[i + 1][j + 1] = x
@@ -70,12 +70,12 @@ func arrayDiff(base []rune, edited []rune) []rune {
 			}
 			i -= 1
 			j -= 1
-		} else if m.col == 1 {
-			c = '+'
-			j -= 1
 		} else if m.row == 1 {
-			c = '-'
+			c = '*'
 			i -= 1
+		} else if m.col == 1 {
+			c = '_'
+			j -= 1
 		} else {
 			panic("over")
 		}
@@ -84,16 +84,22 @@ func arrayDiff(base []rune, edited []rune) []rune {
 	return ret
 }
 
-func show(lines []string) {
-	time.Sleep(time.Second)
+func show(lines []string, changed int, op string, delim string) {
+	time.Sleep(time.Second / 2)
 	print("\033[H\033[2J")
+	// println(delim)
+	// print("\033[H\033[2J")
 	for i, line := range lines {
-		println(i, line)
+		if i == changed {
+			println(i, op, line)
+		} else {
+			println(i, "     ", line)
+		}
 	}
 }
 
 func main() {
-	trial := 3
+	trial := 4
 	var slots = [][]rune{
 		[]rune("ABCDEFGHIJ"),
 		[]rune("abcdefghij"),
@@ -111,10 +117,16 @@ func main() {
 
 	for line := range out {
 		before := display[line.Peer]
-		display[line.Peer] = Diff(before, line.Value)
-		show(display)
-		display[line.Peer] = line.Value
-		show(display)
+
+		diff := Diff(before, line.Value)
+		if before != diff {
+			display[line.Peer] = diff
+			// println()
+			// println("    :", before, " ; ", line.Value)
+			show(display, line.Peer, line.Operation, "----")
+			display[line.Peer] = line.Value
+			show(display, line.Peer, line.Operation, "~")
+		}
 	}
 }
 
