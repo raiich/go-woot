@@ -5,88 +5,62 @@ import (
 	"time"
 )
 
-func show(x string) {
-	time.Sleep(time.Second)
-	print("\033[H\033[2J")
-	println(x)
-}
-
-//func main1() {
-//	site1 := w.NewSite("site1", "a")
-//	former := clone(site1.Raw())
-//	print("\033[H\033[2J")
-//	println(site1.Value())
-//
-//	site1.GenerateIns(0, 'A')
-//	latter := clone(site1.Raw())
-//	show(diff(former, latter))
-//	show(site1.Value())
-//
-//	site1.GenerateIns(2, 'B')
-//	former, latter = latter, clone(site1.Raw())
-//	show(diff(former, latter))
-//	show(site1.Value())
-//
-//	site1.GenerateDel(1)
-//	former, latter = latter, clone(site1.Raw())
-//	show(diff(former, latter))
-//	show(site1.Value())
-//}
-
-type Move struct {
+type move struct {
 	row int
 	col int
 }
 
-func diff(base string, edited string) string {
-	return string(diff2([]rune(base), []rune(edited)))
+func Diff(base string, edited string) string {
+	return string(arrayDiff([]rune(base), []rune(edited)))
 }
 
-func diff2(base []rune, edited []rune) []rune {
+func arrayDiff(base []rune, edited []rune) []rune {
 	dp := make([][]int, len(base) + 1)
-	move := make([][]Move, len(base) + 1)
+	route := make([][]move, len(base) + 1)
 
 	for i := range dp {
 		dp[i] = make([]int, len(edited) + 1)
-		move[i] = make([]Move, len(edited) + 1)
+		route[i] = make([]move, len(edited) + 1)
 	}
 	dp[0][0] = 0
-	move[0][0] = Move{0, 0}
+	route[0][0] = move{0, 0}
 
 	for j := range edited {
 		dp[0][j + 1] = dp[0][j]
-		move[0][j + 1] = Move {0, 1}
+		route[0][j + 1] = move{0, 1}
 	}
 
 	for i := range base {
 		dp[i + 1][0] = dp[i][0]
-		move[i + 1][0] = Move {1, 0}
+		route[i + 1][0] = move{1, 0}
 
 		for j := range edited {
 			plus := 0
 			if base[i] == edited[j] {
 				plus = 1
+			} else {
+				plus=-1
 			}
 
 			a, b, c := dp[i + 1][j], dp[i][j + 1], dp[i][j] + plus
-			x, y, z := Move {0, 1}, Move{1, 0}, Move{1, 1}
+			x, y, z := move{0, 1}, move{1, 0}, move{1, 1}
 			if a <= c && b <= c {
 				dp[i + 1][j + 1] = c
-				move[i + 1][j + 1] = z
+				route[i + 1][j + 1] = z
 			} else if a <= b && c <= b {
 				dp[i + 1][j + 1] = b
-				move[i + 1][j + 1] = y
+				route[i + 1][j + 1] = y
 			} else if b <= a && c <= a {
 				dp[i + 1][j + 1] = a
-				move[i + 1][j + 1] = x
+				route[i + 1][j + 1] = x
 			}
 		}
 	}
 
 	ret := make([]rune, 0)
 
-	for i, j := len(base), len(edited); i != 0 && j != 0; {
-		m := move[i][j]
+	for i, j := len(base), len(edited); i != 0 || j != 0; {
+		m := route[i][j]
 		c := ' '
 		if m.col == 1 && m.row == 1 {
 			if base[i - 1] == edited[j - 1] {
@@ -110,23 +84,52 @@ func diff2(base []rune, edited []rune) []rune {
 	return ret
 }
 
-func main() {
-	println(diff("abcdef", "axcdef"))
+func show(lines []string) {
+	time.Sleep(time.Second)
+	print("\033[H\033[2J")
+	for i, line := range lines {
+		println(i, line)
+	}
 }
 
-func main2() {
+func main() {
 	trial := 3
 	var slots = [][]rune{
+		[]rune("ABCDEFGHIJ"),
 		[]rune("abcdefghij"),
 		[]rune("1234567890"),
-		[]rune("^*-/_=+?:."),
 	}
 
 	peers := simulate.NewPeers(slots)
 	out := make(chan simulate.Info)
 	go simulate.Run(peers, out, trial)
 
+	display := make([]string, len(peers))
+	for i, p := range peers {
+		display[i] = p.Value()
+	}
+
 	for line := range out {
-		println(peers[line.Peer].NumSite, line.Value)
+		before := display[line.Peer]
+		display[line.Peer] = Diff(before, line.Value)
+		show(display)
+		display[line.Peer] = line.Value
+		show(display)
 	}
 }
+
+func TestDiff() {
+	if Diff("abcdef", "axcdef") != "a+-cdef" {
+		panic("")
+	}
+	if Diff("abc", "12345") != "+++++---" {
+		panic("")
+	}
+	if Diff("abc", "") != "---" {
+		panic("")
+	}
+	if Diff("", "") != "" {
+		panic("")
+	}
+}
+
