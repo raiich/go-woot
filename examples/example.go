@@ -3,6 +3,7 @@ package main
 import (
 	pb "../api"
 	w "../internal"
+	"./simulate"
 	"context"
 	"flag"
 	"fmt"
@@ -125,7 +126,7 @@ func show(x string) {
 	println(x)
 }
 
-func main() {
+func main1() {
 	site1 := w.NewSite("site1", "a")
 	former := clone(site1.Raw())
 	print("\033[H\033[2J")
@@ -145,4 +146,21 @@ func main() {
 	former, latter = latter, clone(site1.Raw())
 	show(diff(former, latter))
 	show(site1.Value())
+}
+
+func main() {
+	trial := 3
+	var slots = [][]rune{
+		[]rune("abcdefghij"),
+		[]rune("1234567890"),
+		[]rune("^*-/_=+?:."),
+	}
+
+	peers := simulate.NewPeers(slots)
+	out := make(chan simulate.Info)
+	go simulate.Run(peers, out, trial)
+
+	for line := range out {
+		println(peers[line.Peer].NumSite, line.Value)
+	}
 }
