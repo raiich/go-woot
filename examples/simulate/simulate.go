@@ -5,6 +5,7 @@ import (
 	"../../internal"
 	"container/heap"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"math"
 	"math/rand"
 )
@@ -82,6 +83,8 @@ func (p *Peer) broadcast(op *pb.Operation) {
 			//priority /= 10000
 			priority = int(math.Log(float64(priority)))
 		}
+		op = proto.Clone(op).(*pb.Operation)
+		op.C = proto.Clone(op.C).(*pb.Wchar)
 		heap.Push(&peer.pq, &Item{priority, op})
 	}
 }
