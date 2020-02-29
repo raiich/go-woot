@@ -87,8 +87,8 @@ func arrayDiff(base []rune, edited []rune) []rune {
 func show(lines []string, changed int, op string, delim string) {
 	time.Sleep(time.Second / 2)
 	print("\033[H\033[2J")
-	// println(delim)
-	// print("\033[H\033[2J")
+	println(delim)
+	print("\033[H\033[2J")
 	for i, line := range lines {
 		if i == changed {
 			println(i, op, line)
